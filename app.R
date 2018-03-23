@@ -52,46 +52,47 @@ ui <- fluidPage(
     
     selectInput('xcol', 'X variable', NULL),
     selectInput('ycol', 'Y variable', NULL),
-    selectInput('modelSelect', 'Model Selection', c("Ex","HP", "Le", "Li", "Lo", "Loga", "MHP", "MP", "MPII", "Pa", "SF", "Tt", "WS")),
+    selectInput('modelSelect', 'Model Selection', c("Exponential","Henderson-Pabis", "Lewis", "Linear", "Logarithm", "Logarithmic", "Modified Henderson-Pabis",
+                                                    "Modified Page", "Modified Page II", "Page", "Simplified Fick Diffusion", "Two-term", "Wang-Singh")),
     
     conditionalPanel(
-      condition = "input.modelSelect == 'Ex'",
+      condition = "input.modelSelect == 'Exponential'",
       sliderInput('aEx', "a parameter", min = -10, max = 10, value = -1.0, step = 0.01),
       sliderInput('bEx', "b parameter", min = -10.0, max = 10.0, value = 0, step = 0.01)
     ),
     
     conditionalPanel(
-      condition = "input.modelSelect == 'HP'",
+      condition = "input.modelSelect == 'Henderson-Pabis'",
       sliderInput('aHP', "a parameter", min = -10, max = 10, value = 0.8, step = 0.01),
       sliderInput('kHP', "k parameter", min = -10.0, max = 10.0, value = 0.5, step = 0.01)
     ),
     
     conditionalPanel(
-      condition = "input.modelSelect == 'Le'",
+      condition = "input.modelSelect == 'Lewis'",
       sliderInput('kLe', "k parameter", min = -10, max = 10, value = 0.5, step = 0.01)
     ),
     
     conditionalPanel(
-      condition = "input.modelSelect == 'Li'",
+      condition = "input.modelSelect == 'Linear'",
       sliderInput('mLi', "slope", min = -100, max = 100, value = 1, step = 0.1),
       sliderInput('bLi', "y-intercept", min = 0, max = 1, value = 0.5, step = 0.01)      
     ),
     
     conditionalPanel(
-      condition = "input.modelSelect == 'Lo'",
+      condition = "input.modelSelect == 'Logarithm'",
       sliderInput('aLo', "slope", min = -100, max = 100, value = 1, step = 0.01),
       sliderInput('bLo', "y-intercept", min = -10, max = 10, value = 1, step = 0.1)
     ), 
     
     conditionalPanel(
-      condition = "input.modelSelect == 'Loga'",
+      condition = "input.modelSelect == 'Logarithmic'",
       sliderInput('aLoga', "a parameter", min = -10, max = 10, value = 0.4, step = 0.01),
       sliderInput('kLoga', "k parameter", min = -10, max = 10, value = 0.5, step = 0.01),
       sliderInput('cLoga', "c parameter", min = -10, max = 10, value = 0.4, step = 0.01)
     ), 
     
     conditionalPanel(
-      condition = "input.modelSelect == 'MHP'",
+      condition = "input.modelSelect == 'Modified Henderson-Pabis'",
       sliderInput('aMHP', "a parameter", min = -10, max = 10, value = 0.3, step = 0.01),
       sliderInput('bMHP', "b parameter", min = -10, max = 10, value = 0.2, step = 0.01),
       sliderInput('cMHP', "c parameter", min = -10, max = 10, value = 0.4, step = 0.01),
@@ -101,33 +102,33 @@ ui <- fluidPage(
     ),
     
     conditionalPanel(
-      condition = "input.modelSelect == 'MP'",
+      condition = "input.modelSelect == 'Modified Page'",
       sliderInput('kMP', "k parameter", min = -10.0, max = 10.0, value = 0.5, step = 0.01),
       sliderInput('nMP', "n parameter", min = -10.0, max = 10.0, value = 0.5, step = 0.01)
     ),
     
     conditionalPanel(
-      condition = "input.modelSelect == 'MPII'",
+      condition = "input.modelSelect == 'Modified Page II'",
       sliderInput('kMPII', "k parameter", min = -10, max = 10, value = 0.5, step = 0.01),
       sliderInput('LMPII', "L parameter", min = -10, max = 10, value = 0.1, step = 0.01),
       sliderInput('nMPII', "n parameter", min = -10, max = 10, value = 0.5, step = 0.01)
     ),
     
     conditionalPanel(
-      condition = "input.modelSelect == 'Pa'",
+      condition = "input.modelSelect == 'Page'",
       sliderInput('kPa', "k parameter", min = -10, max = 10, value = -0.5, step = 0.01),
       sliderInput('nPa', "n parameter", min = -10, max = 10, value = 0.6, step = 0.01)
     ),
     
     conditionalPanel(
-      condition = "input.modelSelect == 'SF'",
+      condition = "input.modelSelect == 'Simplified Fick Diffusion'",
       sliderInput('aSF', "a parameter", min = -10.0, max = 10.0, value = 0.8, step = 0.01),
       sliderInput('cSF', "c parameter", min = -10.0, max = 10.0, value = 0.5, step = 0.01),
       sliderInput('LSF', "L parameter", min = -10.0, max = 10.0, value = 1.0, step = 0.01)
     ),
     
     conditionalPanel(
-      condition = "input.modelSelect == 'Tt'",
+      condition = "input.modelSelect == 'Two-term'",
       sliderInput('aTt', "a parameter", min = -10.0, max = 10.0, value = 0.3, step = 0.01),
       sliderInput('k1Tt', "k1 parameter", min = -10.0, max = 10.0, value = 0.5, step = 0.01),
       sliderInput('bTt', "b parameter", min = -10.0, max = 10.0, value = 0.5, step = 0.01),
@@ -135,7 +136,7 @@ ui <- fluidPage(
     ),
     
     conditionalPanel(
-      condition = "input.modelSelect == 'WS'",
+      condition = "input.modelSelect == 'Wang-Singh'",
       sliderInput('aWS', "a parameter", min = -10, max = 10, value = -0.5, step = 0.01),
       sliderInput('bWS', "b parameter", min = -3.0, max = 3.0, value = 0.05, step = 0.01)
     ),
@@ -592,7 +593,7 @@ server <- function(input, output, session) {
     time <- rRaw$time
     MR <- rRaw$MR
     
-    if (input$modelSelect == 'Ex') {
+    if (input$modelSelect == 'Exponential') {
       
       
       nonZero <- which(MR > 0)
@@ -628,7 +629,7 @@ server <- function(input, output, session) {
       
     }
     
-    if (input$modelSelect == 'HP') {
+    if (input$modelSelect == 'Henderson-Pabis') {
       
       tryResult <- tryCatch(nls(MR ~ a * exp(-k * time), start = list(a = input$aHP, k = input$kHP)),
                             error=function(e) {
@@ -660,7 +661,7 @@ server <- function(input, output, session) {
     }
     
     
-    if (input$modelSelect == 'Le') {
+    if (input$modelSelect == 'Lewis') {
       
       tryResult <- tryCatch(nls(MR ~ exp(-k * time), start = list(k = input$kLe)),
                             error=function(e) {
@@ -689,7 +690,7 @@ server <- function(input, output, session) {
       r <- rbind(rRaw, iLe)
     }
     
-    if (input$modelSelect == 'Li') {
+    if (input$modelSelect == 'Linear') {
       
       tryResult <- tryCatch(lm(MR ~ time),
                             error=function(e) {
@@ -719,7 +720,7 @@ server <- function(input, output, session) {
       r <- rbind(rRaw, iLi)
     }
     
-    if (input$modelSelect == 'Lo') {
+    if (input$modelSelect == 'Logarithm') {
       
       tryResult <- tryCatch(lm(exp(MR) ~ time),
                             error=function(e) {
@@ -749,7 +750,7 @@ server <- function(input, output, session) {
     }
     
     
-    if (input$modelSelect == 'Loga') {
+    if (input$modelSelect == 'Logarithmic') {
       
       tryResult <- tryCatch(nls(MR ~ a * exp(-k * time) + c, start = list(a = input$aLoga, k = input$kLoga, c = input$cLoga)),
                             error=function(e) {
@@ -780,7 +781,7 @@ server <- function(input, output, session) {
       
     }
     
-    if(input$modelSelect == 'MHP') {
+    if(input$modelSelect == 'Modified Henderson-Pabis') {
       
       tryResult <- tryCatch(nls(MR ~ a * exp(-ka * time) + b * exp(-kb * time) + c * exp(-kc * time), start = list(a = input$aMHP, b = input$bMHP, c = input$cMHP,
                                                                                                                    ka = input$kaMHP, kb = input$kbMHP, kc = input$kcMHP)),
@@ -814,7 +815,7 @@ server <- function(input, output, session) {
     
     
     
-    if (input$modelSelect == 'MP') {
+    if (input$modelSelect == 'Modified Page') {
       
       tryResult <- tryCatch(nls(MR ~ exp(-(k * time) ^ n), start = list(k = input$kMP, n = input$nMP)),
                             error=function(e) {
@@ -844,7 +845,7 @@ server <- function(input, output, session) {
       
     }
     
-    if (input$modelSelect == 'MPII') {
+    if (input$modelSelect == 'Modified Page II') {
       
       tryResult <- tryCatch(nls(MR ~ exp(-(k * (time / L ^ 2) ^ n)), start = list(k = input$kMPII, L = input$LMPII, n = input$nMPII)),
                             error=function(e) {
@@ -874,11 +875,8 @@ server <- function(input, output, session) {
       r <- rbind(rRaw, iMPII)
       
     }
-    
-    
-    
-    
-    if (input$modelSelect == 'Pa') {
+
+    if (input$modelSelect == 'Page') {
       
       tryResult <- tryCatch(nls(MR ~ exp(-k * time ^ n), start = list(k = input$kPa, n = input$nPa)),
                             error=function(e) {
@@ -909,7 +907,7 @@ server <- function(input, output, session) {
     }
     
     
-    if (input$modelSelect == 'SF') {
+    if (input$modelSelect == 'Simplified Fick Diffusion') {
       
       tryResult <- tryCatch(nls(MR ~ a * exp((-c * time) / L ^ 2), start = list(a = input$aSF, c = input$cSF, L = input$LSF)),
                             error=function(e) {
@@ -940,7 +938,7 @@ server <- function(input, output, session) {
     }
     
     
-    if (input$modelSelect == 'WS') {
+    if (input$modelSelect == 'Wang-Singh') {
       
       # Calculate HP model values and append to r
       
@@ -971,7 +969,7 @@ server <- function(input, output, session) {
       
     }
     
-    if (input$modelSelect == 'Tt') {
+    if (input$modelSelect == 'Two-term') {
       
       tryResult <- tryCatch(nls(MR ~ a * exp(-k1 * time) + b * exp(-k2 * time), start = list(a = input$aTt, k1 = input$k1Tt, b = input$bTt, k2 = input$k2Tt)),
                             error=function(e) {
