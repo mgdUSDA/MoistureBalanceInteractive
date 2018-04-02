@@ -197,7 +197,8 @@ ui <- fluidPage(
   mainPanel(
     tabsetPanel(
       tabPanel("Model", verbatimTextOutput('viewModelResults')),
-      tabPanel("Plot Data", tableOutput('viewPlotData'))
+      tabPanel("Plot Data", tableOutput('viewPlotData')),
+      tabPanel("Info", verbatimTextOutput('viewInfo'))
     )
   )
 )
@@ -244,163 +245,15 @@ server <- function(input, output, session) {
     }
     
   })
+
+  
+  #output$viewInfo <- renderPrint({head(rawData())})
   
   
+
   
-  rawInputData <- reactive({
-    cat("inputData")
-    inFile <- input$file1
-    if (is.null(inFile)) {
-      fileInfo$name <- NULL
-      fileInfo$path <- NULL
-      return(NULL)
-      
-    } else {
-      fileInfo$name <- inFile$name
-      fileInfo$path <- inFile$datapath
-    }
-    
-    
-    # Identify what type of file is to be read
-    
-    if (input$dataFormat == "MB18.xx") {
-      cat("MB18.xx")
-      r <- as.data.frame(read.csv(inFile$datapath, header= TRUE))
-    } else {
-      if (input$dataFormat == 'MB45') {
-        cat("MB45 data")
-        # copied from MoistureBalance18.05
-        
-        if (file.info(infile)$size > 0) {
-          MBData <- read.csv(infile, sep = "\t", header = FALSE, as.is = TRUE, strip.white = TRUE, blank.lines.skip = TRUE)
-          
-          # There may still be other .txt files in the directory that do not contain Ohaus MB45 data.
-          # Look for specific text in line 2 of the .txt file.  Hopefully this elimiates non-data files.
-          
-          if (MBData[2,] == "OHAUS MB45 SN   1122272694") {
-            testID <- grep("TEST ID", MBData[,], ignore.case = TRUE)  
-            switchOffMode <- grep("Switchoff Mode", MBData[,], ignore.case = TRUE)  
-            dryingProfile <- grep("Drying Profile", MBData[,], ignore.case = TRUE)  
-            dryingTemp <- grep("Drying Temp", MBData[,], ignore.case = TRUE)  
-            resultUnits <- grep("Result Units", MBData[,], ignore.case = TRUE)  
-            initialWeight <- grep("Initial Weight", MBData[,], ignore.case = TRUE)
-            finalWeight <- grep("Final Weight", MBData[,], ignore.case = TRUE)
-            elapsedTime <- grep("Elapsed Time", MBData[,], ignore.case = TRUE)  
-            finalPanTemp <- grep("Final Pan Temp", MBData[,], ignore.case = TRUE)  
-            finalResult <- grep("Final Result", MBData[,], ignore.case = TRUE)
-            endFlag <- grep("--End--", MBData[,], ignore.case = TRUE)  
-            nSamples <- length(endFlag)
-            
-            # Verify that data file is correctly formatted  
-            
-            if (length(initialWeight) == 2 * nSamples) {
-              
-              # Remove duplicate Initial Weight values
-              
-              initialWeight <- initialWeight[seq(1, by = 2, len = nSamples)]
-              beginData <- initialWeight + 1
-              endData <- elapsedTime - 1
-              
-              for (i in 1:nSamples) {
-                
-                # Verify that there are more than 2 data points in the data file
-                
-                if (endData[i] - beginData[i] > 1) {
-                  
-                  # Proceed with data processing if there are 2 or more data points
-                  
-                  nModels = 3  # Plot and report model results from the top nModels based on cor(moisutre, fit)
-                  predictDF <- NULL
-                  predictDFW <- NULL
-                  predictNext <- NULL
-                  corr <- NULL
-                  
-                  #   Extract parameter info
-                  
-                  testID[i] <- gsub("\\s+", "", strsplit(MBData[testID[i],], ":")[[1]][2])
-                  switchOffMode[i] <- gsub("\\s+", "", strsplit(MBData[switchOffMode[i],], "Mode.")[[1]][2])
-                  dryingProfile[i] <- gsub("\\s+", "", strsplit(MBData[dryingProfile[i],], "Profile.")[[1]][2])  
-                  dryingTemp[i] <- gsub("\\s+", "", strsplit(MBData[dryingTemp[i],], "Temp.")[[1]][2])
-                  resultUnits[i] <- gsub("\\s+", "", strsplit(MBData[resultUnits[i],], "Units.")[[1]][2])
-                  
-                  initialWeight[i] <- gsub("\\s+", "", strsplit(MBData[initialWeight[i],], "Weight.")[[1]][2])
-                  elapsedTime[i] <- gsub("\\s+", "", strsplit(MBData[elapsedTime[i],], "Time.")[[1]][2])
-                  finalWeight[i] <- gsub("\\s+", "", strsplit(MBData[finalWeight[i],], "Weight.")[[1]][2])
-                  
-                  initialWeight[i] <- gsub("[^0-9\\.]", "", initialWeight[i])
-                  finalWeight[i] <- gsub("[^0-9\\.]", "", finalWeight[i])
-                  finalPanTemp[i] <- gsub("\\s+", "", strsplit(MBData[finalPanTemp[i],], "Temp.")[[1]][2])
-                  finalPanTemp[i] <- gsub("[^0-9\\.]", "", finalPanTemp[i])
-                  finalResult[i] <- gsub("\\s+", "", strsplit(MBData[finalResult[i],], "Result.")[[1]][2])
-                  finalResult[i] <- gsub("[^0-9\\.]", "", finalResult[i])
-                  
-                  rawData <- MBData[beginData[i]:endData[i],]
-                  rawData <- gsub("[^0-9\\.\\:]", " ", rawData)
-                  rawData <- gsub("\\s+", ",", rawData)
-                  rawData <- paste(rawData, i)
-                  rawData <- read.table(text = rawData, sep = ",", header = FALSE,
-                                        col.names = c('time', 'temperature', 'moisture', 'sample'),
-                                        as.is = TRUE)
-                  
-                  # Convert time from character string to time element.  This will append the current date to the date-time element.
-                  # The time may need to be converted to decimal time depending on how the fitting method represents time.
-                  
-                  # rawData$time <- as.POSIXct(rawData$time,format="%H:%M:%S")
-                  
-                  dectime = sapply(rawData$time,decimalTime)
-                  
-                  # Calculate moisture ratio MR, and include in rawData
-                  
-                  MR <- round(1 - rawData$moisture / max(rawData$moisture, na.rm = TRUE), 3)
-                  
-                  # Calculate masses based on initialWeight(s)
-                  
-                  mass <- as.numeric(initialWeight[i]) - as.numeric(initialWeight[i]) * rawData$moisture / 100
-                  
-                  # Include mass in rawData
-                  
-                  rawData <- cbind(rawData[, 1:3], dectime, mass, MR, rawData[, 4])
-                  
-                  # For some reason this process removes the name from the sample columm.  Re-assign column names.
-                  
-                  names(rawData) <-  c('time', 'temperature', 'moisture', 'dectime', 'mass', 'MR', 'sample')
-                  # print(c('time', 'temperature', 'moisture', 'dectime', 'mass', 'MR', 'sample'))
-                  
-                }
-              }
-            }
-          }
-        }
-        
-        
-        
-        
-        
-        # end MoistureBalance18.05
-        
-        
-      } else {
-        
-        # XYZ data
-        
-        cat("XYZ data")
-        # 
-        
-        
-      }
-    }
-    return(r)
-  })
-  
-  
-  
-  # ************** End file read
-  
-  
-  
-  
-  #  rawData <- reactive({
-  rawData <- function(){   
+    rawData <- reactive({
+  #rawData <- function(){   
     # cat("\nrawData\n")
     
     # input$file1 will be NULL initially. After the user selects
@@ -578,7 +431,7 @@ server <- function(input, output, session) {
         # process XYZ data
         # cat("Process ", input$dataFormat, "data\n")
         
-        if (file.info(infile)$size > 0) {
+        if (file.info(inFile)$size > 0) {
           r <- as.data.frame(read.csv(inFile$datapath, header= TRUE))
           print(head(r))
         }  
@@ -1001,7 +854,8 @@ server <- function(input, output, session) {
     }
     
     return(list(r, summaryFit, corNLS, corMan))
-  }#  })
+ # }
+    })
   
   iMData <- reactive({
     if (is.null(rawData()[[1]])) {
