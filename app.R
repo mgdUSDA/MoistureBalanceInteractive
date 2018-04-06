@@ -7,6 +7,7 @@
 #    http://shiny.rstudio.com/
 #
 
+options(shiny.maxRequestSize = 200*1024^2)
 
 library(shiny)
 library(ggplot2)
