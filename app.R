@@ -253,7 +253,7 @@ server <- function(input, output, session) {
   
 
   
-    rawData <- reactive({
+    rawInputData <- reactive({
   #rawData <- function(){   
     # cat("\nrawData\n")
     
@@ -262,7 +262,9 @@ server <- function(input, output, session) {
     # 'size', 'type', and 'datapath' columns. The 'datapath'
     # column will contain the local filenames where the data can
     # be found.
-    
+      validate(
+      need(input$file1 != "", "Select file to begin.")
+      )
     inFile <- input$file1
     
     if (is.null(inFile)) {
@@ -364,6 +366,8 @@ server <- function(input, output, session) {
                   rawData <- gsub("[^0-9\\.\\:]", " ", rawData)
                   rawData <- gsub("\\s+", ",", rawData)
                   rawData <- paste(rawData, i)
+                  
+                  print(head(rawData))
                   rawData <- read.table(text = rawData, sep = ",", header = FALSE,
                                         col.names = c('time', 'temperature', 'moisture', 'sample'),
                                         as.is = TRUE)
@@ -385,11 +389,12 @@ server <- function(input, output, session) {
                   
                   # Include mass in rawData
                   
-                  rawData <- cbind(rawData[, 1:3], dectime, mass, MR, rawData[, 4])
+                  rawData <- cbind(rawData[, 1:3], dectime, mass, MR, i, "raw")
                   
                   # For some reason this process removes the name from the sample columm.  Re-assign column names.
                   
-                  names(rawData) <-  c('time', 'temperature', 'moisture', 'dectime', 'mass', 'MR', 'sample')
+                  print(head(rawData))
+                  names(rawData) <-  c('time', 'temperature', 'moisture', 'dectime', 'mass', 'MR', 'sample', 'model')
                   # print(c('time', 'temperature', 'moisture', 'dectime', 'mass', 'MR', 'sample'))
                   # cat("Number of samples: ", nSamples, "\n")
                   
@@ -406,9 +411,9 @@ server <- function(input, output, session) {
                 
               }
               # cat("sampleSelector:", input$sampleNumber, "\n")
-              r <- subset(rawData, rawData$sample == input$sampleNumber)
-              r <- data.frame(rawData$dectime, rawData$MR, "raw")
-              colnames(r) <- c("time", "MR", "model")
+              # r <- subset(rawData, rawData$sample == input$sampleNumber)
+              # r <- data.frame(rawData$dectime, rawData$MR, "raw")
+              # colnames(r) <- c("time", "MR", "model")
             }
           }
         }
@@ -438,14 +443,23 @@ server <- function(input, output, session) {
         }  
       }
     }
+    print(head(rawData))
+    rawData
     
-    
+    })
     
     # r <- as.data.frame(read.csv(inFile$datapath, header= TRUE))
+
+  modelData <- reactive({
     
-    rRaw <- subset(r, r$model == "raw")
-    time <- rRaw$time
-    MR <- rRaw$MR
+    print(which(rawInputData()$sample == get(input$sampleNumber)))
+    
+  #  rRaw <- rawInputData()[rRows, c("dectime", "MR", "model", "sample")]
+    
+    rRaw <- cbind(rawInputData()$dectime, rawInputData()$MR, rawInputData()$model, rawInputData()$sample)
+    colnames(rRaw) <- c("time", "MR", "model", "sample")
+    time <- as.numeric(rRaw$dectime)
+    MR <- as.numeric(rRaw$MR)
     
     if (input$modelSelect == 'Exponential') {
       
@@ -859,20 +873,20 @@ server <- function(input, output, session) {
     })
   
   iMData <- reactive({
-    if (is.null(rawData()[[1]])) {
+    if (is.null(modelData()[[1]])) {
       return(NULL)
     } else {
-      iM <- rawData()[[1]]
+      iM <- modelData()[[1]]
       iM <- spread(iM, model, MR)
       return(iM)
     }
   })
   
   iMPlotData <- reactive({
-    if (is.null(rawData()[[1]])) {
+    if (is.null(modelData()[[1]])) {
       return(NULL)
     } else {
-      iM <- subset(rawData()[[1]], rawData()[[1]]$model %in% c('raw', input$modelSelect))
+      iM <- subset(modelData()[[1]], modelData()[[1]]$model %in% c('raw', input$modelSelect))
       return(iM)
     }
   })
@@ -886,7 +900,7 @@ server <- function(input, output, session) {
   
   observe({
     x <- as.character(colnames(iMData()))
-    plotVariables <- as.character(names(rawData()[[1]]))
+    plotVariables <- as.character(names(modelData()[[1]]))
     
     
     # Can use character(0) to remove all choices
@@ -933,7 +947,7 @@ server <- function(input, output, session) {
   plotData <- reactive({
     
     #   plotData <- subset(rawData()[[1]], rawData()[[1]]$model %in% input$modelID)
-    plotData <- rawData()[[1]]
+    plotData <- modelData()[[1]]
     # dataSubset <- isolate(input$datasub)
     # plotData <- subset(rawData(), rawData()$model %in% dataSubset)
     
@@ -955,7 +969,7 @@ server <- function(input, output, session) {
   
   
   output$viewModelResults <- renderPrint({
-    rawData()[[2]]
+    modelData()[[2]]
   })
   
   plotInput <- function(){
@@ -993,7 +1007,7 @@ server <- function(input, output, session) {
     # Because it's a ggplot2, we don't need to supply xvar or yvar; if this
     # were a base graphics plot, we'd need those.
     if (!is.null(plotData())) {
-      rawData()[[3]]
+      modelData()[[3]]
     } else {
       "No data available."
     }
@@ -1003,7 +1017,7 @@ server <- function(input, output, session) {
     # Because it's a ggplot2, we don't need to supply xvar or yvar; if this
     # were a base graphics plot, we'd need those.
     if (!is.null(plotData())) {
-      rawData()[[4]]
+      modelData()[[4]]
     } else {
       "No data available."
     }
@@ -1037,7 +1051,7 @@ server <- function(input, output, session) {
   
   
   observeEvent(input$saveModel, {
-    modelInfo <- as.character(rawData()[[2]]$formula)
+    modelInfo <- as.character(modelData()[[2]]$formula)
     # cat(paste("saveModel button",  modelInfo), "\n")
     txtout <- append(txtout, "\n more text...\n")
     # cat(lines(txtout))
