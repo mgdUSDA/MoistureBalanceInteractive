@@ -393,14 +393,16 @@ server <- function(input, output, session) {
                   
                   # For some reason this process removes the name from the sample columm.  Re-assign column names.
                   
-                  print(head(rawData))
-                  names(rawData) <-  c('time', 'temperature', 'moisture', 'dectime', 'mass', 'MR', 'sample', 'model')
-                  # print(c('time', 'temperature', 'moisture', 'dectime', 'mass', 'MR', 'sample'))
-                  # cat("Number of samples: ", nSamples, "\n")
-                  
-                  
-                  
+                  print(head(rawData, -1))
+ 
                 }
+                if (i == 1){
+                    rData <- rawData
+                    colnames(rData) <-  c('time', 'temperature', 'moisture', 'dectime', 'mass', 'MR', 'sample', 'model')
+                  } else {
+                    rData <- rbind(rData, rawData)
+                  }
+                # rawData <- NULL
               }
               
               if (nSamples > 1) {
@@ -443,8 +445,9 @@ server <- function(input, output, session) {
         }  
       }
     }
-    print(head(rawData))
-    rawData
+    print(head(rData, -1))
+    print(colnames(rData))
+    rData
     
     })
     
@@ -452,7 +455,7 @@ server <- function(input, output, session) {
 
   modelData <- reactive({
     
-    print(which(rawInputData()$sample == get(input$sampleNumber)))
+    print((rawInputData()$sample == input$sampleNumber))
     
   #  rRaw <- rawInputData()[rRows, c("dectime", "MR", "model", "sample")]
     
