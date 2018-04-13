@@ -262,6 +262,7 @@ server <- function(input, output, session) {
     # 'size', 'type', and 'datapath' columns. The 'datapath'
     # column will contain the local filenames where the data can
     # be found.
+      model <- "raw"
       validate(
       need(input$file1 != "", "Select file to begin.")
       )
@@ -330,6 +331,7 @@ server <- function(input, output, session) {
               endData <- elapsedTime - 1
               
               for (i in 1:nSamples) {
+                sampleID <- i
                 
                 # Verify that there are more than 2 data points in the data file
                 
@@ -367,9 +369,8 @@ server <- function(input, output, session) {
                   rawData <- gsub("\\s+", ",", rawData)
                   rawData <- paste(rawData, i)
                   
-                  print(head(rawData))
                   rawData <- read.table(text = rawData, sep = ",", header = FALSE,
-                                        col.names = c('time', 'temperature', 'moisture', 'sample'),
+                                        col.names = c('time', 'temperature', 'moisture', 'sampleID'),
                                         as.is = TRUE)
                   
                   # Convert time from character string to time element.  This will append the current date to the date-time element.
@@ -389,51 +390,23 @@ server <- function(input, output, session) {
                   
                   # Include mass in rawData
                   
-                  rawData <- cbind(rawData[, 1:3], dectime, mass, MR, i, "raw")
-                  
-                  # For some reason this process removes the name from the sample columm.  Re-assign column names.
-                  
-                  print(head(rawData, -1))
- 
+                  rawData <- cbind(rawData[, 1:3], dectime, mass, MR, sampleID, model)
                 }
                 if (i == 1){
                     rData <- rawData
-                    colnames(rData) <-  c('time', 'temperature', 'moisture', 'dectime', 'mass', 'MR', 'sample', 'model')
                   } else {
                     rData <- rbind(rData, rawData)
                   }
-                # rawData <- NULL
               }
-              
               if (nSamples > 1) {
                 
                 updateRadioButtons(session, "sampleNumber",
                                    choices = seq(1, nSamples)
                 )
-                
               }
-              # cat("sampleSelector:", input$sampleNumber, "\n")
-              # r <- subset(rawData, rawData$sample == input$sampleNumber)
-              # r <- data.frame(rawData$dectime, rawData$MR, "raw")
-              # colnames(r) <- c("time", "MR", "model")
             }
           }
         }
-        
-        
-        
-        
-        
-        # end MoistureBalance18.05
-        
-        
-        
-        
-        
-        
-        
-        
-        # cat("Processed MB45 data\n")
         
       } else {
         # process XYZ data
@@ -441,32 +414,23 @@ server <- function(input, output, session) {
         
         if (file.info(inFile)$size > 0) {
           r <- as.data.frame(read.csv(inFile$datapath, header= TRUE))
-          print(head(r))
+          #print(head(r))
         }  
       }
     }
-    print(head(rData, -1))
-    print(colnames(rData))
     rData
-    
     })
-    
-    # r <- as.data.frame(read.csv(inFile$datapath, header= TRUE))
 
   modelData <- reactive({
     
-    print((rawInputData()$sample == input$sampleNumber))
-    
-  #  rRaw <- rawInputData()[rRows, c("dectime", "MR", "model", "sample")]
-    
-    rRaw <- cbind(rawInputData()$dectime, rawInputData()$MR, rawInputData()$model, rawInputData()$sample)
-    colnames(rRaw) <- c("time", "MR", "model", "sample")
-    time <- as.numeric(rRaw$dectime)
+    rInput <- rawInputData()[rawInputData()$sampleID == input$sampleNumber,]
+    rRaw <- data.frame(rInput$dectime, rInput$MR, rInput$model, rInput$sampleID)
+    colnames(rRaw) <- c("time", "MR", "model", "sampleID")    
+    time <- as.numeric(rRaw$time)
     MR <- as.numeric(rRaw$MR)
     
     if (input$modelSelect == 'Exponential') {
-      
-      
+
       nonZero <- which(MR > 0)
       MRNZ <- MR[nonZero]
       timeNZ <- time[nonZero]
@@ -493,11 +457,9 @@ server <- function(input, output, session) {
       
       MRManual <- exp(input$aEx * time + input$bEx)
       corMan <- cor(MR, MRManual)
-      iEx <- data.frame(time, MRManual)
-      iEx <- data.frame(iEx, "iEx")
-      colnames(iEx) <- c("time", "MR", "model")
+      iEx <- data.frame(time, MRManual, "iEx", rRaw$sampleID[1])
+      colnames(iEx) <- colnames(rRaw)
       r <- rbind(rRaw, iEx)
-      
     }
     
     if (input$modelSelect == 'Henderson-Pabis') {
@@ -523,12 +485,9 @@ server <- function(input, output, session) {
       }
       MRManual <- input$aHP * exp(-input$kHP * time)
       corMan <- cor(MR, MRManual)
-      iHP <- data.frame(time, MRManual)
-      iHP <- data.frame(iHP, "iHP")
-      colnames(iHP) <- c("time", "MR", "model")
+      iHP <- data.frame(time, MRManual, "iHP", rRaw$sampleID[1])
+      colnames(iHP) <- colnames(rRaw)
       r <- rbind(rRaw, iHP)
-      
-      
     }
     
     
@@ -555,9 +514,8 @@ server <- function(input, output, session) {
       }
       MRManual <- exp(-input$kLe * time)
       corMan <- cor(MR, MRManual)
-      iLe <- data.frame(time, MRManual)
-      iLe <- data.frame(iLe, "iLe")
-      colnames(iLe) <- c("time", "MR", "model")
+      iLe <- data.frame(time, MRManual, "iLe", rRaw$sampleID[1])
+      colnames(iLe) <- colnames(rRaw)
       r <- rbind(rRaw, iLe)
     }
     
@@ -585,9 +543,8 @@ server <- function(input, output, session) {
       }
       MRManual <- input$bLi + input$mLi * time
       corMan <- cor(MR, MRManual)
-      iLi <- data.frame(time, MRManual)
-      iLi <- data.frame(iLi, "iLi")
-      colnames(iLi) <- c("time", "MR", "model")
+      iLi <- data.frame(time, MRManual, "iLi", rRaw$sampleID[1])
+      colnames(iLi) <- colnames(rRaw)
       r <- rbind(rRaw, iLi)
     }
     
@@ -614,9 +571,8 @@ server <- function(input, output, session) {
       }
       MRManual <- log(input$aLo * time + input$bLo)
       corMan <- cor(MR, MRManual)
-      iLo <- data.frame(time, MRManual)
-      iLo <- data.frame(iLo, "iLo")
-      colnames(iLo) <- c("time", "MR", "model")
+      iLo <- data.frame(time, MRManual, "iLo", rRaw$sampleID[1])
+      colnames(iLo) <- colnames(rRaw)
       r <- rbind(rRaw, iLo)
     }
     
@@ -645,9 +601,8 @@ server <- function(input, output, session) {
       
       MRManual <- input$aLoga * exp(-input$kLoga * time) + input$cLoga
       corMan <- cor(MR, MRManual)
-      iLoga <- data.frame(time, MRManual)
-      iLoga <- data.frame(iLoga, "iLoga")
-      colnames(iLoga) <- c("time", "MR", "model")
+      iLoga <- data.frame(time, MRManual, "iLoga", rRaw$sampleID[1])
+      colnames(iLoga) <- colnames(rRaw)
       r <- rbind(rRaw, iLoga)
       
     }
@@ -678,9 +633,8 @@ server <- function(input, output, session) {
       
       MRManual <- input$aMHP * exp(-input$kaMHP * time) + input$bMHP * exp(-input$kbMHP * time) + input$cMHP * exp(-input$kcMHP * time)
       corMan <- cor(MR, MRManual)
-      iMHP <- data.frame(time, MRManual)
-      iMHP <- data.frame(iMHP, "iMHP")
-      colnames(iMHP) <- c("time", "MR", "model")
+      iMHP <- data.frame(time, MRManual, "iMHP", rRaw$sampleID[1])
+      colnames(iMHP) <- colnames(rRaw)
       r <- rbind(rRaw, iMHP)
     }
     
@@ -709,9 +663,8 @@ server <- function(input, output, session) {
       
       MRManual <- exp(-(input$kMP * time) ^ input$nMP)
       corMan <- cor(MR, MRManual)
-      iMP <- data.frame(time, MRManual)
-      iMP <- data.frame(iMP, "iMP")
-      colnames(iMP) <- c("time", "MR", "model")
+      iMP <- data.frame(time, MRManual, "iMP", rRaw$sampleID[1])
+      colnames(iMP) <- colnames(rRaw)
       r <- rbind(rRaw, iMP)
       
     }
@@ -740,9 +693,8 @@ server <- function(input, output, session) {
       
       MRManual <- exp(-(input$kMPII * (time / input$LMPII ^ 2) ^ input$nMPII))
       corMan <- cor(MR, MRManual)
-      iMPII <- data.frame(time, MRManual)
-      iMPII <- data.frame(iMPII, "iMPII")
-      colnames(iMPII) <- c("time", "MR", "model")
+      iMPII <- data.frame(time, MRManual, "iMPII", rRaw$sampleID[1])
+      colnames(iMPII) <- colnames(rRaw)
       r <- rbind(rRaw, iMPII)
       
     }
@@ -771,9 +723,8 @@ server <- function(input, output, session) {
       
       MRManual <- exp(-input$kPa * time ^ input$nPa)
       corMan <- cor(MR, MRManual)
-      iPa <- data.frame(time, MRManual)
-      iPa <- data.frame(iPa, "iPa")
-      colnames(iPa) <- c("time", "MR", "model")
+      iPa <- data.frame(time, MRManual, "iPa", rRaw$sampleID[1])
+      colnames(iPa) <- colnames(rRaw)
       r <- rbind(rRaw, iPa)
     }
     
@@ -802,9 +753,8 @@ server <- function(input, output, session) {
       
       MRManual <- input$aSF * exp((-input$cSF * time) / input$LSF ^ 2)
       corMan <- cor(MR, MRManual)
-      iSF <- data.frame(time, MRManual)
-      iSF <- data.frame(iSF, "iSF")
-      colnames(iSF) <- c("time", "MR", "model")
+      iSF <- data.frame(time, MRManual, "iSF", rRaw$sampleID[1])
+      colnames(iSF) <- colnames(rRaw)
       r <- rbind(rRaw, iSF)
     }
     
@@ -833,9 +783,8 @@ server <- function(input, output, session) {
       }
       MRManual <-  1 + input$aWS * time + input$bWS * time ^ 2
       corMan <- cor(MR, MRManual)
-      iWS <- data.frame(time, MRManual)
-      iWS <- cbind(iWS, "iWS")
-      colnames(iWS) <- c("time", "MR", "model")
+      iWS <- data.frame(time, MRManual, "iWS", rRaw$sampleID[1])
+      colnames(iWS) <- colnames(rRaw)
       r <- rbind(rRaw, iWS)
       
     }
@@ -865,14 +814,13 @@ server <- function(input, output, session) {
       
       MRManual <-  input$aTt * exp(-input$k1Tt * time) + input$bTt * exp(-input$k2Tt * time)
       corMan <- cor(MR, MRManual)
-      iTt <- data.frame(time, MRManual)
-      iTt <- cbind(iTt, "iTt")
-      colnames(iTt) <- c("time", "MR", "model")
+      iTt <- data.frame(time, MRManual, "iTt", rRaw$sampleID[1])
+      colnames(iTt) <- colnames(rRaw)
       r <- rbind(rRaw, iTt)
     }
     
     return(list(r, summaryFit, corNLS, corMan))
- # }
+
     })
   
   iMData <- reactive({
@@ -1003,8 +951,7 @@ server <- function(input, output, session) {
       ylab(input$ycol)
     print(g)
   })
-  
-  
+
   
   output$corrNLS <- renderPrint({
     # Because it's a ggplot2, we don't need to supply xvar or yvar; if this
